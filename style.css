@@ -1,0 +1,117 @@
+:root {
+  --bg: #15162a; --panel: #1e2038; --line: #343861; --text: #dcdef0; --dim: #8d91b3;
+  --accent: #f7c873; --accent-ink: #2a1c05; --danger: #ff7b8f;
+  color-scheme: dark;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column;
+  background: var(--bg); color: var(--text);
+  font: 13px/1.5 ui-sans-serif, system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+button, select, input { font: inherit; color: inherit; }
+button, select, input[type="number"], #title {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px;
+}
+button { cursor: pointer; }
+button:hover, select:hover { border-color: var(--dim); }
+button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+code { font-family: var(--mono); font-size: 12px; background: var(--panel); padding: 1px 4px; border-radius: 3px; }
+
+/* ---- 上のバー ---- */
+header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px 16px; border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0 6px 0 0; font-size: 18px; letter-spacing: .4em; color: var(--accent); }
+#title { width: 190px; font-family: var(--mono); text-transform: uppercase; }
+.spacer { flex: 1; }
+
+/* ---- 全体の割りつけ ---- */
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: 412px minmax(0, 1fr); }
+aside { display: flex; flex-direction: column; min-height: 0; padding: 16px; border-right: 1px solid var(--line); }
+.keys { margin: 12px 0 0; text-align: center; font-size: 11px; color: var(--dim); }
+#status { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; }
+#status.error #state { color: var(--danger); }
+#saved { color: var(--dim); }
+#log {
+  flex: 1; min-height: 60px; margin-top: 6px; padding: 6px 8px; overflow: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word;
+}
+#log .err { color: var(--danger); cursor: pointer; }
+
+#work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+#tabs { display: flex; gap: 2px; padding: 8px 14px 0; border-bottom: 1px solid var(--line); }
+#tabs button { border-bottom: 0; border-radius: 6px 6px 0 0; padding: 6px 16px; }
+.panel { flex: 1; min-height: 0; overflow: auto; padding: 14px; }
+.hint { margin: 8px 0 0; font-size: 12px; color: var(--dim); }
+#asm-status { font-family: var(--mono); }
+#asm-status.err { color: var(--danger); }
+.cols { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+canvas { display: block; image-rendering: pixelated; touch-action: none; border: 1px solid var(--line); cursor: crosshair; max-width: 100%; }
+
+/* ---- コード ---- */
+#panel-code { display: flex; flex-direction: column; overflow: hidden; }
+.codewrap {
+  position: relative; flex: 1; min-height: 0; display: flex; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+}
+#gutter, #code { margin: 0; padding: 8px 0; font: 13px/18px var(--mono); tab-size: 2; }
+#gutter { width: 44px; padding-right: 8px; overflow: hidden; text-align: right; color: var(--dim); user-select: none; }
+#code {
+  flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; resize: none; border: 0; outline: 0;
+  background: transparent; color: var(--text); white-space: pre; overflow: auto;
+}
+#errline { position: absolute; left: 0; right: 0; height: 18px; background: rgba(255, 107, 129, .22); pointer-events: none; }
+
+/* ---- スプライト ---- */
+#colors button { width: 40px; height: 30px; padding: 0; border-width: 2px; }
+#colors button.on { border-color: var(--danger); }
+#flags label { display: inline-flex; align-items: center; gap: 2px; font: 12px var(--mono); }
+
+/* ---- マップ ---- */
+.scroll { flex: 1; min-width: 280px; max-height: calc(100vh - 150px); overflow: auto; border: 1px solid var(--line); }
+.scroll canvas { border: 0; max-width: none; }
+
+/* ---- サウンド ---- */
+#sfx-slots { display: grid; grid-template-columns: repeat(8, 30px); gap: 3px; }
+#sfx-slots button { padding: 3px 0; font: 11px var(--mono); color: var(--dim); }
+#sfx-slots button.used { color: var(--text); border-color: var(--accent); }
+#sfx-slots button.on { color: var(--accent-ink); }
+#sfx-speed { width: 60px; }
+
+/* ---- ヘルプ ---- */
+.help { max-width: 760px; }
+.help h2 { margin: 18px 0 6px; font-size: 14px; color: var(--accent); }
+.help h2:first-child { margin-top: 0; }
+.help table { width: 100%; border-collapse: collapse; }
+.help th, .help td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-weight: 400; }
+.help th { width: 40%; white-space: nowrap; }
+.help pre { margin: 0; padding: 10px; background: var(--panel); border-radius: 6px; font: 12px/1.5 var(--mono); overflow: auto; }
+
+/* ---- ダイアログ ---- */
+#modal { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .6); }
+#modal .box { width: 520px; max-width: 100%; padding: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+#modal p { margin: 0; }
+#modal p.err { color: var(--danger); }
+#modal textarea {
+  display: block; width: 100%; height: 180px; margin-top: 12px; padding: 8px; resize: vertical;
+  background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: 12px/1.4 var(--mono);
+}
+#modal .row { justify-content: flex-end; margin-top: 14px; }
+
+@media (max-width: 900px) {
+  body { height: auto; }
+  main { display: block; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  #log { max-height: 120px; }
+  .codewrap { min-height: 420px; }
+  .scroll { max-height: 70vh; }
+}

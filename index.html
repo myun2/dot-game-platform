@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DOT — 4 階調の仮想携帯ゲーム機</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>DOT</h1>
+  <input id="title" maxlength="24" spellcheck="false" aria-label="カートリッジ名">
+  <button id="run" class="primary">▶ 実行</button>
+  <button id="stop">■ 停止</button>
+  <span class="spacer"></span>
+  <select id="samples" aria-label="サンプルを開く"><option value="">サンプルを開く…</option></select>
+  <button id="new">新規</button>
+  <button id="import">読み込み</button>
+  <button id="export">保存 (.json)</button>
+  <button id="export-html">HTML 書き出し</button>
+  <select id="palette" aria-label="画面の色"></select>
+  <input id="file" type="file" accept=".json,application/json" hidden>
+</header>
+
+<main>
+  <aside>
+    <div id="console"></div>
+    <p class="keys">十字キー = 矢印　A = Z　B = X　START = Enter　SELECT = Shift</p>
+    <div id="status"><b id="state">停止中</b><span id="saved"></span></div>
+    <div id="log"></div>
+  </aside>
+
+  <section id="work">
+    <nav id="tabs">
+      <button data-tab="code" class="on">コード</button>
+      <button data-tab="sprite">スプライト</button>
+      <button data-tab="map">マップ</button>
+      <button data-tab="sound">サウンド</button>
+      <button data-tab="help">ヘルプ</button>
+    </nav>
+
+    <!-- ===== コード ===== -->
+    <div id="panel-code" class="panel">
+      <div class="codewrap">
+        <div id="errline" hidden></div>
+        <pre id="gutter"></pre>
+        <textarea id="code" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea>
+      </div>
+      <p class="hint" id="asm-status">&nbsp;</p>
+      <p class="hint">Ctrl / ⌘ + Enter で実行。<code>init { }</code> <code>update { }</code> <code>draw { }</code> のブロックを本体が呼びます（書きかたは「ヘルプ」）。</p>
+    </div>
+
+    <!-- ===== スプライト ===== -->
+    <div id="panel-sprite" class="panel" hidden>
+      <div class="cols">
+        <div>
+          <canvas id="sheet-view" width="384" height="384"></canvas>
+          <p class="hint" id="sprite-info"></p>
+        </div>
+        <div>
+          <canvas id="pix" width="256" height="256"></canvas>
+          <div class="row" id="colors"></div>
+          <div class="row" id="tools">
+            <button data-tool="pen" class="on">ペン</button>
+            <button data-tool="fill">塗りつぶし</button>
+            <select id="size" aria-label="編集サイズ"><option value="1">8×8</option><option value="2">16×16</option></select>
+          </div>
+          <div class="row" id="ops">
+            <button data-op="fliph">左右反転</button>
+            <button data-op="flipv">上下反転</button>
+            <button data-op="rot">回転</button>
+            <button data-op="clear">消去</button>
+            <button data-op="copy">コピー</button>
+            <button data-op="paste">貼り付け</button>
+          </div>
+          <div class="row" id="flags"><span>フラグ</span></div>
+          <p class="hint">色 0（いちばん明るい色）はスプライトでは透明。右クリックで色を拾う。<br>フラグの意味は自由（例: 0 = 壁）。コードから <code>fget 変数, タイル, ビット</code> で読む。<br>Ctrl / ⌘ + Z で元に戻す。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== マップ ===== -->
+    <div id="panel-map" class="panel" hidden>
+      <div class="cols">
+        <div>
+          <canvas id="map-picker" width="256" height="256"></canvas>
+          <div class="row" id="map-tools">
+            <button data-tool="pen" class="on">ペン</button>
+            <button data-tool="fill">塗りつぶし</button>
+            <label><input type="checkbox" id="map-grid" checked> 画面の枠</label>
+          </div>
+          <p class="hint" id="map-info">&nbsp;</p>
+          <p class="hint">タイル 0 は「なにもない」。右クリックでマップ上のタイルを拾う。<br>太い枠が 1 画面ぶん（20×18 タイル）。<br>変更は次の実行から反映。</p>
+        </div>
+        <div class="scroll" id="map-scroll"><canvas id="map-view" width="1024" height="1024"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ===== サウンド ===== -->
+    <div id="panel-sound" class="panel" hidden>
+      <div class="cols">
+        <div>
+          <div id="sfx-slots"></div>
+          <div class="row"><label>波形 <select id="sfx-wave"></select></label></div>
+          <div class="row"><label>速さ <input id="sfx-speed" type="number" min="1" max="32"> フレーム / ステップ</label></div>
+          <div class="row">
+            <button id="sfx-play" class="primary">▶ 試聴</button>
+            <button id="sfx-clear">消去</button>
+          </div>
+          <p class="hint">マスをクリックで音を置く / 消す。下の帯は音量。<br>コードから <code>sfx 番号</code> で鳴らす。<br><code>sfx 番号, チャンネル, 1</code> でループ（BGM）。</p>
+        </div>
+        <canvas id="sfx-grid" width="446" height="480"></canvas>
+      </div>
+    </div>
+
+    <!-- ===== ヘルプ ===== -->
+    <div id="panel-help" class="panel" hidden>
+      <div class="help">
+        <h2>本体の仕様</h2>
+        <table>
+          <tr><th>画面</th><td>160×144 ピクセル、4 階調（0 = 明るい 〜 3 = 暗い）、毎秒 60 フレーム</td></tr>
+          <tr><th>スプライト</th><td>8×8 ピクセルのタイルが 256 枚（16×16 に並んだ 1 枚のシート）</td></tr>
+          <tr><th>マップ</th><td>64×64 タイル</td></tr>
+          <tr><th>サウンド</th><td>4 チャンネル。効果音 32 個、各 16 ステップ、音域は C3〜B6</td></tr>
+          <tr><th>ボタン</th><td><code>LEFT RIGHT UP DOWN A B START SELECT</code></td></tr>
+          <tr><th>変数</th><td>4096 個まで（配列の要素も 1 個と数える）。数は小数も使える</td></tr>
+          <tr><th>セーブ</th><td>数値 16 個</td></tr>
+        </table>
+
+        <h2>プログラムの形</h2>
+<pre>consts {
+  SPEED = 1.5            # 定数
+}
+
+variables {
+  x = 10, y              # 変数（値を省くと 0）
+}
+
+init {                   # 起動時に 1 回
+}
+
+update {                 # 毎フレーム（計算）
+  if (btn RIGHT) {
+    x = x + SPEED
+  }
+}
+
+draw {                   # 毎フレーム（描画）
+  cls 0
+  spr 1, x, 60
+}</pre>
+        <p class="hint">ブロックの中に 1 行 1 命令で書く。<code>#</code> から行末まではコメント。命令は小文字で書く（大文字でも動く）。<br><code>{</code> のあとは改行し、<code>}</code> は行の先頭に書く。ブロックや宣言を書く順番は自由。</p>
+
+        <h2>変数と値</h2>
+        <table>
+          <tr><th><code>variables { x, y = 5 }</code></th><td>変数を作る。カンマか改行で区切り、値を省くと 0。値は起動時に入る</td></tr>
+          <tr><th><code>reset</code></th><td>すべての変数を variables に書いた値に戻す（ゲームのやり直しに使う）</td></tr>
+          <tr><th><code>xs[8]</code> / <code>xs = [1, 2, 3]</code></th><td>variables の中で配列を作る。<code>xs[0]</code>、<code>xs[i + 1]</code> のように使う</td></tr>
+          <tr><th><code>consts { N = 8 * 16 }</code></th><td>定数に名前をつける</td></tr>
+          <tr><th><code>x = 値</code></th><td>代入する。<code>x = y * 2 + 1</code></td></tr>
+          <tr><th>値</th><td><code>10</code> <code>-3</code> <code>0.25</code> <code>$FF</code> <code>'A'</code>、変数、<code>+ - * / %</code> とかっこの式。命令の引数にも式を書ける</td></tr>
+          <tr><th><code>int(v)</code> <code>abs(v)</code></th><td>小数点以下の切り捨て、絶対値</td></tr>
+          <tr><th><code>min(a, b)</code> <code>max(a, b)</code></th><td>小さいほう、大きいほう。<code>max(0, min(x, 152))</code> で範囲に収める</td></tr>
+          <tr><th><code>rnd(n)</code></th><td>0 以上 n 未満の整数の乱数</td></tr>
+          <tr><th><code>add sub mul div mod</code> 変数, 値</th><td>変数に足す・引く・掛ける・割る・余りにする（<code>x = x + 1</code> と書いても同じ）</td></tr>
+          <tr><th><code>inc 変数</code> / <code>dec 変数</code> / <code>neg 変数</code></th><td>+1、-1、符号を逆に</td></tr>
+        </table>
+
+        <h2>システム定数</h2>
+        <table>
+          <tr><th><code>LEFT</code> <code>RIGHT</code> <code>UP</code> <code>DOWN</code></th><td>十字キー（値は 0、1、2、3）。<code>btn LEFT</code> のように使う</td></tr>
+          <tr><th><code>A</code> <code>B</code></th><td>A ボタン、B ボタン（4、5）</td></tr>
+          <tr><th><code>START</code> <code>SELECT</code></th><td>START、SELECT（6、7）</td></tr>
+          <tr><th><code>SCREEN_W</code> <code>SCREEN_H</code></th><td>画面の幅と高さ（160、144）</td></tr>
+          <tr><th><code>TIME</code></th><td>起動からのフレーム数（毎フレーム 1 ずつ増える。60 で 1 秒）</td></tr>
+        </table>
+        <p class="hint">はじめから使える名前で、どれも大文字で書く。値は変えられず、同じ名前の変数や定数は作れない。</p>
+
+        <h2>流れ</h2>
+        <table>
+          <tr><th><code>if (条件) {</code> … <code>} else if (条件) {</code> … <code>} else {</code> … <code>}</code></th><td>条件で分ける。<code>else</code> は省ける</td></tr>
+          <tr><th><code>while (条件) {</code> … <code>}</code></th><td>条件が成り立つあいだ繰り返す</td></tr>
+          <tr><th><code>for (i: 0..9) {</code> … <code>}</code></th><td>変数を 1 ずつ増やしながら繰り返す（9 も含む）</td></tr>
+          <tr><th>条件</th><td><code>x == 1</code> <code>!=</code> <code>&lt;</code> <code>&lt;=</code> <code>&gt;</code> <code>&gt;=</code>、<code>btn LEFT</code>（押されている）、<code>btnp A</code>（いま押された）。<code>not</code> <code>and</code> <code>or</code> でつなげる</td></tr>
+          <tr><th><code>名前 {</code> … <code>}</code></th><td>自分のブロック（サブルーチン）を作る</td></tr>
+          <tr><th><code>call 名前</code></th><td>ブロックを呼ぶ。終わると呼んだ場所へ戻る。引数はないので変数で受け渡す</td></tr>
+          <tr><th><code>ret</code></th><td>ブロックの途中で戻る</td></tr>
+        </table>
+
+        <h2>描画</h2>
+        <table>
+          <tr><th><code>cls c</code></th><td>画面を色 c で塗りつぶす</td></tr>
+          <tr><th><code>pset x, y, c</code> / <code>pget 変数, x, y</code></th><td>1 ピクセルを描く / 読む</td></tr>
+          <tr><th><code>line x0, y0, x1, y1, c</code></th><td>線</td></tr>
+          <tr><th><code>rect x, y, w, h, c</code> / <code>rectf</code></th><td>四角形の枠 / 塗り</td></tr>
+          <tr><th><code>circ x, y, r, c</code> / <code>circf</code></th><td>円の枠 / 塗り</td></tr>
+          <tr><th><code>spr n, x, y, 反転, w, h</code></th><td>タイル n を描く（色 0 は透明）。反転は 1 = 左右、2 = 上下、3 = 両方。w, h はタイル数。n, x, y 以外は省ける</td></tr>
+          <tr><th><code>map mx, my, x, y, w, h</code></th><td>マップの (mx, my) から w×h タイルを (x, y) に描く。引数なしで全体</td></tr>
+          <tr><th><code>print "文字", x, y, c</code><br><code>print 値, x, y, c</code></th><td>文字や数を描く（英大文字・数字・記号、1 文字 4×6）。x, y を省くと直前の続きに書く</td></tr>
+          <tr><th><code>camera x, y</code></th><td>以降の描画をずらす（スクロール）。引数なしで戻す</td></tr>
+          <tr><th><code>pal from, to</code></th><td>以降の描画で色を置き換える。引数なしで戻す</td></tr>
+        </table>
+
+        <h2>マップ・音・そのほか</h2>
+        <table>
+          <tr><th><code>mget 変数, x, y</code> / <code>mset x, y, n</code></th><td>マップのタイル番号を読む / 書く（x, y はタイル単位。実行中だけの変更）</td></tr>
+          <tr><th><code>fget 変数, n, bit</code></th><td>タイル n のフラグ（1 / 0）。bit を省くと 8 ビットまとめた数</td></tr>
+          <tr><th><code>reload</code></th><td>マップをカートリッジの状態に戻す</td></tr>
+          <tr><th><code>sfx n, ch, loop</code></th><td>効果音 n を鳴らす。ch を省くと空きチャンネル。<code>sfx -1</code> で全停止</td></tr>
+          <tr><th><code>dget 変数, i</code> / <code>dset i, 値</code></th><td>セーブデータ（i は 0〜15）を読む / 書く</td></tr>
+          <tr><th><code>srand 値</code></th><td>乱数の種を決める</td></tr>
+          <tr><th><code>log 値, "文字", …</code></th><td>本体の下のログ欄に出力する（デバッグ用）</td></tr>
+        </table>
+        <p class="hint">座標に小数を渡すと切り捨てて描く。1 フレームに実行できるのは update と draw それぞれ 20 万命令までで、超えるとエラーで止まる。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="modal-text">
+    <p id="modal-text"></p>
+    <textarea id="modal-area" spellcheck="false" aria-label="カートリッジの中身"></textarea>
+    <div class="row" id="modal-buttons"></div>
+  </div>
+</div>
+
+<script src="core.js"></script>
+<script src="audio.js"></script>
+<script src="player.js"></script>
+<script src="carts.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>
